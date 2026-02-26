@@ -1,182 +1,234 @@
-/**
- * MIT License
-
- * Copyright (c) 2022 Egzon Pllana
-
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
-
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
-
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
+//
+//  CodableFilesTests.swift
+//  CodableFiles
+//
+//  Created by Egzon Pllana on 2.4.23.
+//
 
 import Foundation
 import XCTest
 import CodableFiles
 
-// Enum for String literals
+// MARK: - String Literals
+
 private extension String {
     static let testsDirectory = "TestsDirectory"
     static let anotherTestsDirectory = "AnotherTestsDirectory"
-    static let bundleNameKey = "CFBundleName"
-    static let fileName = "userModel"
-    static let userJSONFileName = "User"
-    static let usersArrayJSONFileName = "UsersArray"
-    static let json = "json"
+    static let userFileName = "User"
+    static let usersArrayFileName = "UsersArray"
+    static let nonExistentFileName = "NonExistentFile"
 }
 
-// User object with dummy data to be used for testing purpose.
-private let userModel: User = User(firstName: "First name", lastName: "Last name")
-private let anotherUserModel: User = User(firstName: "Another First name", lastName: "Another Last name")
+// MARK: - CodableFilesTests
 
-// MARK: - CodableFiles XCTestCase
-
-class CodableFilesTests: XCTestCase {
+final class CodableFilesTests: XCTestCase {
 
     // MARK: - Properties
 
-    private var sut: CodableFiles!
+    private lazy var sut: CodableFiles = CodableFiles.shared
     private let testsDirectory = CodableFilesDirectory.directoryName(.testsDirectory)
     private let anotherTestsDirectory = CodableFilesDirectory.directoryName(.anotherTestsDirectory)
 
-    // MARK: - Test life cycle
+    // MARK: - Test Life Cycle
 
     override func setUp() {
         super.setUp()
-        // init
-        sut = CodableFiles.shared
-        sut.setBundle(Bundle(for: type(of: self)))
+        sut.setBundle(Bundle.module)
     }
 
     override func tearDown() {
-        // delete created directories during tests
         try? sut.deleteDirectory()
         try? sut.deleteDirectory(directoryName: testsDirectory)
         try? sut.deleteDirectory(directoryName: anotherTestsDirectory)
-
-        // rest
-        sut = nil
-
         super.tearDown()
     }
 
-    // MARK: - Tests
+    // MARK: - Initialization Tests
 
-    func test_initialization_success() {
-        let codableFiles = CodableFiles.shared
-        XCTAssertNotNil(codableFiles)
+    func test_initialization_returnsSharedInstance() {
+        let instance = CodableFiles.shared
+        XCTAssertNotNil(instance)
+        XCTAssertTrue(instance === sut)
     }
 
-    func test_load_single_dto_success() throws {
-        // given
-        let fileName: String = .userJSONFileName
-        let directory = testsDirectory
+    // MARK: - Save Tests
 
-        // when
-        let user: User = try sut.load(withFilename: fileName, atDirectory: directory)
-
-        // then
-        XCTAssertNotNil(user)
-    }
-
-    func test_load_array_of_dto_success() throws {
-        // given
-        let fileName: String = .usersArrayJSONFileName
-        let directory = testsDirectory
-
-        // when
-        let users: [User] = try sut.load(withFilename: fileName, atDirectory: directory)
-
-        // then
-        XCTAssertNotNil(users)
-    }
-
-    func test_save_single_dto_success() throws {
-        // given
-        let userFileName: String = .userJSONFileName
+    func test_save_singleObject_createsFileAndReturnsURL() throws {
         let user: User = .fake()
 
-        // when
-        try sut.save(user, withFilename: userFileName)
+        let savedURL = try sut.save(user, withFileName: .userFileName)
 
-        // then
+        XCTAssertTrue(FileManager.default.fileExists(atPath: savedURL.path))
     }
 
-    func test_save_multiple_dtos_success() throws {
-        // given
-        let usersFileName: String = .usersArrayJSONFileName
-        let directory = testsDirectory
+    func test_save_arrayOfObjects_createsFileAndReturnsURL() throws {
+        let users = [User.fake(), User.fake()]
 
-        // when
-        let users: [User] = try sut.load(withFilename: usersFileName, atDirectory: directory)
+        let savedURL = try sut.save(users, withFileName: .usersArrayFileName)
 
-        // then
-        XCTAssertNotEqual(users.count, 0)
-
-        // given
-        let userFileName: String = .userJSONFileName
-
-        // when
-        try sut.save(users, withFilename: userFileName)
-
-        // then
+        XCTAssertTrue(FileManager.default.fileExists(atPath: savedURL.path))
     }
 
-    func test_delete_file_success() throws {
-        // given
-        let fileName: String = .userJSONFileName
+    func test_save_toCustomDirectory_createsFileInCorrectLocation() throws {
         let user: User = .fake()
 
-        // when
-        try sut.save(user, withFilename: fileName)
+        let savedURL = try sut.save(user, withFileName: .userFileName, atDirectory: testsDirectory)
 
-        // when
-        try sut.deleteFile(withFileName: fileName)
-
-        // when
-        let isInDirectory = try sut.isInDirectory(fileName: fileName)
-
-        // then
-        XCTAssertFalse(isInDirectory)
+        XCTAssertTrue(savedURL.path.contains(String.testsDirectory))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: savedURL.path))
     }
 
-    func test_delete_directory_success() throws {
-        // given
-        let userFileName: String = .userJSONFileName
+    // MARK: - Load Tests
+
+    func test_load_singleObject_decodesCorrectly() throws {
+        let user: User = try sut.load(withFileName: .userFileName, atDirectory: testsDirectory)
+
+        XCTAssertFalse(user.firstName.isEmpty)
+        XCTAssertFalse(user.lastName.isEmpty)
+    }
+
+    func test_load_arrayOfObjects_decodesCorrectly() throws {
+        let users: [User] = try sut.load(withFileName: .usersArrayFileName, atDirectory: testsDirectory)
+
+        XCTAssertFalse(users.isEmpty)
+    }
+
+    func test_load_savedObject_roundTripsCorrectly() throws {
+        let original: User = .fake()
+        try sut.save(original, withFileName: .userFileName)
+
+        let loaded: User = try sut.load(withFileName: .userFileName)
+
+        XCTAssertEqual(loaded.firstName, original.firstName)
+        XCTAssertEqual(loaded.lastName, original.lastName)
+    }
+
+    // MARK: - Delete File Tests
+
+    func test_deleteFile_removesOnlyTheTargetFile() throws {
         let user: User = .fake()
+        try sut.save(user, withFileName: .userFileName)
+        try sut.save(user, withFileName: .usersArrayFileName)
 
-        // when
-        try sut.save(user, withFilename: userFileName)
+        try sut.deleteFile(withFileName: .userFileName)
 
-        // then
+        let isDeleted = try sut.isInDirectory(fileName: .userFileName)
+        let otherExists = try sut.isInDirectory(fileName: .usersArrayFileName)
+        XCTAssertFalse(isDeleted)
+        XCTAssertTrue(otherExists)
+    }
+
+    func test_deleteFile_nonExistent_throwsFileNotFound() {
+        XCTAssertThrowsError(try sut.deleteFile(withFileName: .nonExistentFileName)) { error in
+            guard let codableError = error as? CodableFilesError else {
+                XCTFail("Expected CodableFilesError, got \(error)")
+                return
+            }
+            if case .fileNotFound(let name) = codableError {
+                XCTAssertEqual(name, .nonExistentFileName)
+            } else {
+                XCTFail("Expected .fileNotFound, got \(codableError)")
+            }
+        }
+    }
+
+    // MARK: - Delete Directory Tests
+
+    func test_deleteDirectory_removesEntireDirectory() throws {
+        let user: User = .fake()
+        try sut.save(user, withFileName: .userFileName)
+
         try sut.deleteDirectory()
+
+        let exists = try sut.isInDirectory(fileName: .userFileName)
+        XCTAssertFalse(exists)
     }
 
-    func test_copy_file_from_bundle_success() throws {
-        // given
-        let fileName: String = .userJSONFileName
-        let bundle = Bundle(for: type(of: self))
+    func test_deleteDirectory_nonExistent_throwsDirectoryNotFound() {
+        let nonExistent = CodableFilesDirectory.directoryName("NonExistentDir")
 
-        // when
-        try sut.copyFileFromBundle(bundle: bundle, fileName: fileName)
+        XCTAssertThrowsError(try sut.deleteDirectory(directoryName: nonExistent)) { error in
+            guard let codableError = error as? CodableFilesError else {
+                XCTFail("Expected CodableFilesError, got \(error)")
+                return
+            }
+            if case .directoryNotFound = codableError {
+                // Expected
+            } else {
+                XCTFail("Expected .directoryNotFound, got \(codableError)")
+            }
+        }
+    }
 
-        // when
-        let user: User = try sut.load(withFilename: fileName)
+    // MARK: - Copy From Bundle Tests
 
-        // then
-        XCTAssertNotNil(user)
+    func test_copyFileFromBundle_copiesAndLoadsCorrectly() throws {
+        let bundle = Bundle.module
+
+        try sut.copyFileFromBundle(bundle: bundle, fileName: .userFileName)
+
+        let user: User = try sut.load(withFileName: .userFileName)
+        XCTAssertFalse(user.firstName.isEmpty)
+    }
+
+    func test_copyFileFromBundle_nonExistentFile_throwsBundleFileNotFound() {
+        let bundle = Bundle.module
+
+        XCTAssertThrowsError(
+            try sut.copyFileFromBundle(bundle: bundle, fileName: .nonExistentFileName)
+        ) { error in
+            guard let codableError = error as? CodableFilesError else {
+                XCTFail("Expected CodableFilesError, got \(error)")
+                return
+            }
+            if case .bundleFileNotFound(let name) = codableError {
+                XCTAssertEqual(name, .nonExistentFileName)
+            } else {
+                XCTFail("Expected .bundleFileNotFound, got \(codableError)")
+            }
+        }
+    }
+
+    // MARK: - File Path & Existence Tests
+
+    func test_getFilePath_existingFile_returnsURL() throws {
+        let user: User = .fake()
+        try sut.save(user, withFileName: .userFileName)
+
+        let path = try sut.getFilePath(forFileName: .userFileName)
+
+        XCTAssertNotNil(path)
+    }
+
+    func test_getFilePath_nonExistentFile_returnsNil() throws {
+        let path = try sut.getFilePath(forFileName: .nonExistentFileName)
+
+        XCTAssertNil(path)
+    }
+
+    func test_isInDirectory_existingFile_returnsTrue() throws {
+        let user: User = .fake()
+        try sut.save(user, withFileName: .userFileName)
+
+        let exists = try sut.isInDirectory(fileName: .userFileName)
+
+        XCTAssertTrue(exists)
+    }
+
+    func test_isInDirectory_nonExistentFile_returnsFalse() throws {
+        let exists = try sut.isInDirectory(fileName: .nonExistentFileName)
+
+        XCTAssertFalse(exists)
+    }
+
+    // MARK: - Configuration Tests
+
+    func test_setDefaultDirectoryName_updatesWriteDirectoryName() {
+        let customName = "CustomDirectory"
+
+        sut.setDefaultDirectoryName(directoryName: customName)
+
+        XCTAssertEqual(sut.writeDirectoryName, customName)
+        sut.setDefaultDirectoryName(directoryName: "CodableFilesDirectory")
     }
 }

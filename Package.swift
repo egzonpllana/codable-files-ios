@@ -25,8 +25,10 @@ let package = Package(
         .testTarget(
             name: "CodableFilesTests",
             dependencies: ["CodableFiles"],
+            path: "Tests",
             resources: [
-                .copy("Resources/UserModel.json"),
+                .copy("Resources/User.json"),
+                .copy("Resources/UsersArray.json"),
             ]),
     ]
 )
