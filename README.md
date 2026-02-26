@@ -4,9 +4,6 @@
 
 <p align="center">
     <img src="https://img.shields.io/badge/Swift-5.5+-orange.svg" />
-    <a href="https://cocoapods.org/pods/CodableFiles">
-        <img src="https://img.shields.io/cocoapods/v/CodableFiles.svg" alt="CocoaPods" />
-    </a>
     <a href="https://swift.org/package-manager">
         <img src="https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat" alt="Swift Package Manager" />
     </a>
@@ -146,13 +143,9 @@ To add CodableFiles as a dependency to your Xcode project, select File > Swift P
 https://github.com/egzonpllana/CodableFiles.git
 ```
 
-### CocoaPods
+### CocoaPods (Deprecated)
 
-[CocoaPods](https://cocoapods.org) is a dependency manager for Cocoa projects. For usage and installation instructions, visit their website. To integrate CodableFiles into your Xcode project using CocoaPods, specify it in your `Podfile`:
-
-```ruby
-pod 'CodableFiles'
-```
+> **Note:** As of v2.0.0, CocoaPods is no longer supported. Please migrate to Swift Package Manager, which is Apple's official dependency management solution. The last CocoaPods-compatible version is `1.1.2`.
 
 ## Backstory
 
