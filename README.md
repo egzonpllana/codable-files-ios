@@ -80,21 +80,37 @@ try codableFiles.deleteDirectory()
 
 Delete a custom directory.
 ```swift
-try codableFiles.deleteDirectory(directoryName: .directoryName("MyFolder"))
+let customDir = CodableFilesDirectory.directoryName("MyFolder")
+try codableFiles.deleteDirectory(directoryName: customDir)
 ```
 
 Copy a file from Bundle to documents directory.
 ```swift
-let bundle = Bundle(for: type(of: self))
-let pathURL = try codableFiles.copyFileFromBundle(bundle: bundle, fileName: fileName)
+let pathURL = try codableFiles.copyFileFromBundle(bundle: .main, fileName: fileName)
 ```
 
-Save and load to a custom directory.
+Save and load using a custom directory.
 ```swift
 let customDir = CodableFilesDirectory.directoryName("UserData")
 
 try codableFiles.save(user, withFileName: fileName, atDirectory: customDir)
 let loaded: User = try codableFiles.load(withFileName: fileName, atDirectory: customDir)
+```
+
+Check if a file exists.
+```swift
+let exists = try codableFiles.isInDirectory(fileName: fileName)
+```
+
+Get a file path.
+```swift
+let fileURL: URL? = try codableFiles.getFilePath(forFileName: fileName)
+```
+
+Change the default directory name.
+```swift
+codableFiles.setDefaultDirectoryName(directoryName: "MyAppData")
+print(codableFiles.writeDirectoryName) // "MyAppData"
 ```
 
 Recommended way to handle errors.
@@ -120,7 +136,7 @@ Once you have your Swift package set up, adding CodableFiles as a dependency is 
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/egzonpllana/CodableFiles.git", .upToNextMajor(from: "2.0.0"))
+    .package(url: "https://github.com/egzonpllana/CodableFiles.git", from: "2.0.0")
 ]
 ```
 
